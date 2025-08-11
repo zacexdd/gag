@@ -1,1 +1,1 @@
-https://raw.githubusercontent.com/zacexdd/gag/refs/heads/main/gag
+loadstring(game:HttpGet("https://raw.githubusercontent.com/zacexdd/gag/refs/heads/main/gag"))()
