@@ -42,7 +42,7 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("Pets", nil) -- Title, Image
 local MainSection = MainTab:CreateSection("pets section")
 
-local Dropdown = Tab:CreateDropdown({
+local Dropdown = MainTab:CreateDropdown({
    Name = "Select Pet",
    Options = {"Red Fox","Raccon","Drangonfly","Disco Bee"},
    CurrentOption = {"nil"},
@@ -85,10 +85,10 @@ local Button = MainTab:CreateButton({
 local SecondTab = Window:CreateTab("Seeds", nil) -- Title, Image
 local SecondSection = SecondTab:CreateSection("seeds section")
 
-local Dropdown = Tab:CreateDropdown({
+local Dropdown = SecondTab:CreateDropdown({
    Name = "Select Seed",
    Options = {"Candy Blossom","Tomato","Pineapple","Avocado"},
-   CurrentOption = {"nil"},
+   CurrentOption = "nill",
    MultipleOptions = false,
    Flag = "Dropdown2", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
    Callback = function(Options)
@@ -102,3 +102,5 @@ local Button = SecondTab:CreateButton({
    print('Candy Blossom')
    end,
 })
+
+end
