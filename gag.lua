@@ -115,12 +115,9 @@ if game.PlaceId == 126884695634066 then
                         [petUUID] = {
                             Name = petName,
                             Weight = weight,
-                            Age = age,
-                            Rarity = "Common",
-                            Obtained = os.time()
+                            Age = age,                        
                         }
                     }
-                }
                 game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(args))
             end)
 
@@ -154,4 +151,5 @@ if game.PlaceId == 126884695634066 then
             game:GetService("Debris"):AddItem(marker, 5)
         end
     })
+
 end
