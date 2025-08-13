@@ -30,7 +30,7 @@ if game.PlaceId == 126884695634066 then
         KeySystem = true, -- Set this to true to use our key system
         KeySettings = {
             Title = "Zace hub key system",
-            Subtitle = "Copy the link from below",
+            Subtitle = "Enter valid key to acces the script",
             Note = "Get the key from here : www.gamelnk.site", -- Use this to tell the user how to get a key
             FileName = "Zace Hub", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
             SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
@@ -40,16 +40,12 @@ if game.PlaceId == 126884695634066 then
     })
 
     local PetTab = Window:CreateTab("Pets", nil) -- Title, Image
-    local PetSection = PetTab:CreateSection("pets spawner")
+    local PetSection = PetTab:CreateSection("Pets Spawner")
 
     local Dropdown = PetTab:CreateDropdown({
         Name = "Select Pet",
-        Options = {
-        "Red Fox",
-        "Raccon", 
-        "Drangonfly", 
-        "Disco Bee",
-        },
+        Options = {"Red Fox", "Raccon", "Drangonfly", "Disco Bee", "Kitsune", "T-Rex", "Corrupted Kitsune",
+                   "French Fry Ferret", "Moon Cat", "Raiju", "Hotdog Daschund", "Spinosaurus", "Spaghetti Sloth"},
         CurrentOption = {"Red Fox"},
         MultipleOptions = false,
         Flag = "Dropdown1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
@@ -83,7 +79,33 @@ if game.PlaceId == 126884695634066 then
     local Button = PetTab:CreateButton({
         Name = "Spawn Pet",
         Callback = function()
-           
+
+            local petName = Rayfield.Flags.Dropdown1.CurrentOption[1] -- from dropdown
+            local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1 -- weight slider
+            local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1 -- age slider (if you use it later)
+
+            -- Step 1: Load pet assets
+            game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
+
+            -- Step 2: Generate random UUID for the pet
+            local function randomUUID()
+                local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+                return string.gsub(template, "[xy]", function(c)
+                    local v = (c == "x") and math.random(0, 0xf) or math.random(8, 0xb)
+                    return string.format("%x", v)
+                end)
+            end
+            local petUUID = "{" .. randomUUID() .. "}"
+
+            -- Step 3: Equip the pet in front of the player
+            local playerPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
+            local spawnPos = playerPos * CFrame.new(3, 0, -3) -- offset from player
+
+            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer("EquipPet", petUUID, spawnPos)
+
+            -- Optional: You could store petUUID if you want to unequip later
+            print("Spawned pet:", petName, "UUID:", petUUID, "Weight:", weight, "Age:", age)
+
         end
     })
 
