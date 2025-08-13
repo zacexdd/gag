@@ -79,68 +79,94 @@ if game.PlaceId == 126884695634066 then
     local Button = PetTab:CreateButton({
         Name = "Spawn Pet",
         Callback = function()
-                        local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
+                               local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
             local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1
             local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1
 
-            -- 1. Generate simple UUID without curly braces
-            local petUUID = string.format("%x%x%x%x%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x%x%x%x%x",
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
-                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15)
-            )
+            -- 1. Generate valid UUID
+            local function generateValidUUID()
+                local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+                return "{"..string.gsub(template, "[xy]", function(c)
+                    local v = (c == "x") and math.random(0, 0xf) or math.random(8, 0xb)
+                    return string.format("%x", v)
+                end).."}"
+            end
+            local petUUID = generateValidUUID()
 
-            -- 2. Load pet assets FIRST (critical for visual appearance)
+            -- 2. Load pet assets
             game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
+            wait(0.5)
+
+            -- 3. METHOD 1: Try adding through PetService instead
+            local addToInventoryArgs = {
+                [1] = "AddPet",
+                [2] = petUUID,
+                [3] = {
+                    Name = petName,
+                    Weight = weight,
+                    Age = age,
+                    Rarity = "Common"
+                }
+            }
             
-            -- Wait for assets with timeout
-            local startTime = tick()
-            while tick() - startTime < 3 do -- 3 second timeout
-                if pcall(function()
-                    game:GetService("ContentProvider"):PreloadAsync({petName})
-                end) then
-                    break
+            -- Try different services until we find the right one
+            local servicesToTry = {
+                "PetsService",
+                "PetService",
+                "PlayerDataService",
+                "DataService",
+                "InventoryManager"
+            }
+
+            local addedToInventory = false
+            
+            for _, serviceName in ipairs(servicesToTry) do
+                local service = game:GetService("ReplicatedStorage").GameEvents:FindFirstChild(serviceName)
+                if service then
+                    pcall(function()
+                        service:FireServer(unpack(addToInventoryArgs))
+                        print("Attempted to add via", serviceName)
+                        addedToInventory = true
+                    end)
+                    wait(0.2)
                 end
-                wait(0.1)
-            end
-            wait(0.5) -- Additional safety delay
-
-            -- 3. Add pet through direct PetsService call
-            local success, err = pcall(function()
-                game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(
-                    "AddPet",
-                    petUUID,
-                    {
-                        Name = petName,
-                        Age = age,
-                        Weight = weight
-                    }
-                )
-            end)
-            
-            if not success then
-                warn("Inventory add failed:", err)
             end
 
-            -- 4. Spawn pet in world
-            local character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+            if not addedToInventory then
+                -- 4. METHOD 2: Try hatching a fake egg if inventory add fails
+                local hatchArgs = {
+                    [1] = "HatchPet",
+                    [2] = petName,
+                    [3] = petUUID
+                }
+                game:GetService("ReplicatedStorage").GameEvents.PetEggService:FireServer(unpack(hatchArgs))
+                wait(0.5)
+            end
+
+            -- 5. Equip the pet
+            local player = game.Players.LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
             local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
             local spawnCFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, -5)
             
-            -- Final spawn call with proper arguments
-            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(
-                "EquipPet",
-                petUUID,
-                spawnCFrame
-            )
+            local equipArgs = {
+                [1] = "EquipPet",
+                [2] = petUUID,
+                [3] = spawnCFrame
+            }
+            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(equipArgs))
 
-            -- Debug output
-            print(string.format("Spawned %s (Age: %d, Weight: %d)", petName, age, weight))
+            -- Debug
+            local marker = Instance.new("Part")
+            marker.Anchored = true
+            marker.Size = Vector3.new(1,1,1)
+            marker.Position = spawnCFrame.Position
+            marker.Color = Color3.fromRGB(0,255,0)
+            marker.Transparency = 0.7
+            marker.Parent = workspace
+            game:GetService("Debris"):AddItem(marker, 5)
+            
+            print("Spawned", petName, "with UUID:", petUUID)
         end
     })
 end
