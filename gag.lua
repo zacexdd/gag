@@ -79,50 +79,68 @@ if game.PlaceId == 126884695634066 then
     local Button = PetTab:CreateButton({
         Name = "Spawn Pet",
         Callback = function()
-            local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
+                        local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
             local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1
             local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1
 
-            -- 1. Generate UUID (simplified version)
-            local petUUID = string.format("%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x",
-                math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf),
-                math.random(0, 0xf), math.random(0, 0xf),
-                math.random(0, 0xf), math.random(0, 0xf),
-                math.random(0, 0xf), math.random(0, 0xf),
-                math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf)
+            -- 1. Generate simple UUID without curly braces
+            local petUUID = string.format("%x%x%x%x%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x-%x%x%x%x%x%x%x%x",
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15),
+                math.random(0, 15), math.random(0, 15), math.random(0, 15), math.random(0, 15)
             )
 
-            -- 2. Load pet assets
+            -- 2. Load pet assets FIRST (critical for visual appearance)
             game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
-            wait(1) -- Important wait for assets to load
+            
+            -- Wait for assets with timeout
+            local startTime = tick()
+            while tick() - startTime < 3 do -- 3 second timeout
+                if pcall(function()
+                    game:GetService("ContentProvider"):PreloadAsync({petName})
+                end) then
+                    break
+                end
+                wait(0.1)
+            end
+            wait(0.5) -- Additional safety delay
 
-            -- 3. Add to inventory
-            local inventoryArgs = {
-                [1] = "AddPet",
-                [2] = petUUID,
-                [3] = {
-                    Name = petName,
-                    Age = age,
-                    Weight = weight
-                }
-            }
-            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(inventoryArgs))
+            -- 3. Add pet through direct PetsService call
+            local success, err = pcall(function()
+                game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(
+                    "AddPet",
+                    petUUID,
+                    {
+                        Name = petName,
+                        Age = age,
+                        Weight = weight
+                    }
+                )
+            end)
+            
+            if not success then
+                warn("Inventory add failed:", err)
+            end
 
             -- 4. Spawn pet in world
-            local character = game.Players.LocalPlayer.Character
-            local spawnPos = character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+            local character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
+            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            local spawnCFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, -5)
             
-            local spawnArgs = {
-                [1] = "EquipPet",
-                [2] = petUUID,
-                [3] = spawnPos
-            }
-            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(spawnArgs))
+            -- Final spawn call with proper arguments
+            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(
+                "EquipPet",
+                petUUID,
+                spawnCFrame
+            )
 
-            -- FIXED Debug output (proper Vector3 to string conversion)
-            local posString = string.format("(%.1f, %.1f, %.1f)", spawnPos.Position.X, spawnPos.Position.Y, spawnPos.Position.Z)
-            print(string.format("Spawned %s (Age: %d, Weight: %d) at %s", 
-                petName, age, weight, posString))
+            -- Debug output
+            print(string.format("Spawned %s (Age: %d, Weight: %d)", petName, age, weight))
         end
     })
 end
