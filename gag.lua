@@ -83,73 +83,67 @@ if game.PlaceId == 126884695634066 then
             local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1
             local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1
 
-            -- 1. Generate valid UUID
+            -- 1. Generate valid UUID (corrected format based on your console)
             local function generateValidUUID()
                 local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
-                return "{" .. string.gsub(template, "[xy]", function(c)
+                return string.gsub(template, "[xy]", function(c)
                     local v = (c == "x") and math.random(0, 0xf) or math.random(8, 0xb)
                     return string.format("%x", v)
-                end) .. "}"
+                end)
             end
             local petUUID = generateValidUUID()
 
-            -- 2. Load pet assets
+            -- 2. Load pet assets FIRST (MOST IMPORTANT STEP)
+            print("Loading assets for:", petName)
             game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
-            wait(0.5)
 
-            -- 3. METHOD 1: Try adding through PetService instead
-            local addToInventoryArgs = {
-                [1] = "AddPet",
-                [2] = petUUID,
-                [3] = {
-                    Name = petName,
-                    Weight = weight,
-                    Age = age,
-                }
-            }
-
-            -- Try different services until we find the right one
-            local servicesToTry = {"PetsService", "PetService", "PlayerDataService", "DataService", "InventoryManager"}
-
-            local addedToInventory = false
-
-            for _, serviceName in ipairs(servicesToTry) do
-                local service = game:GetService("ReplicatedStorage").GameEvents:FindFirstChild(serviceName)
-                if service then
-                    pcall(function()
-                        service:FireServer(unpack(addToInventoryArgs))
-                        print("Attempted to add via", serviceName)
-                        addedToInventory = true
-                    end)
-                    wait(0.2)
+            -- 3. Wait for assets to properly load (increased delay)
+            for i = 1, 30 do -- 3 second timeout
+                if game:GetService("ContentProvider"):PreloadAsync(
+                    {"rbxassetid://" .. tostring(petName:gsub("%s+", ""))}) then
+                    break
                 end
+                wait(0.1)
             end
+            wait(1) -- Additional safety delay
 
-            if not addedToInventory then
-                -- 4. METHOD 2: Try hatching a fake egg if inventory add fails
-                local hatchArgs = {
-                    [1] = "HatchPet",
-                    [2] = petName,
-                    [3] = petUUID
+            -- 4. Add to inventory through correct service
+            local inventorySuccess, inventoryError = pcall(function()
+                local args = {
+                    [1] = "AddPet",
+                    [2] = {
+                        [petUUID] = {
+                            Name = petName,
+                            Weight = weight,
+                            Age = age,
+                            Rarity = "Common",
+                            Obtained = os.time()
+                        }
+                    }
                 }
-                game:GetService("ReplicatedStorage").GameEvents.PetEggService:FireServer(unpack(hatchArgs))
-                wait(0.5)
+                game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(args))
+            end)
+
+            if not inventorySuccess then
+                print("Inventory add failed:", inventoryError)
             end
 
-            -- 5. Equip the pet
+            -- 5. Spawn pet in world
             local player = game.Players.LocalPlayer
             local character = player.Character or player.CharacterAdded:Wait()
             local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
             local spawnCFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, -5)
 
-            local equipArgs = {
+            local spawnArgs = {
                 [1] = "EquipPet",
                 [2] = petUUID,
                 [3] = spawnCFrame
             }
-            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(equipArgs))
 
-            -- Debug
+            print("Spawning pet:", petName, "UUID:", petUUID)
+            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(spawnArgs))
+
+            -- 6. Debug visualization
             local marker = Instance.new("Part")
             marker.Anchored = true
             marker.Size = Vector3.new(1, 1, 1)
@@ -158,8 +152,6 @@ if game.PlaceId == 126884695634066 then
             marker.Transparency = 0.7
             marker.Parent = workspace
             game:GetService("Debris"):AddItem(marker, 5)
-
-            print("Spawned", petName, "with UUID:", petUUID)
         end
     })
 end
