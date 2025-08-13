@@ -79,24 +79,24 @@ if game.PlaceId == 126884695634066 then
     local Button = PetTab:CreateButton({
         Name = "Spawn Pet",
         Callback = function()
-                       local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
+            local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
             local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1
             local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1
 
-            -- 1. Generate simple UUID (no curly braces)
-            local petUUID = string.format("%08x-%04x-%04x-%04x-%012x",
-                math.random(0, 0xffffffff),
-                math.random(0, 0xffff),
-                math.random(0, 0xffff),
-                math.random(0, 0xffff),
-                math.random(0, 0xffffffffffff)
+            -- 1. Generate UUID (simplified version)
+            local petUUID = string.format("%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x",
+                math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf),
+                math.random(0, 0xf), math.random(0, 0xf),
+                math.random(0, 0xf), math.random(0, 0xf),
+                math.random(0, 0xf), math.random(0, 0xf),
+                math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf), math.random(0, 0xf)
             )
 
-            -- 2. Load pet assets (essential for visual appearance)
+            -- 2. Load pet assets
             game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
-            wait(1) -- Critical wait for assets to load
+            wait(1) -- Important wait for assets to load
 
-            -- 3. Minimal inventory addition
+            -- 3. Add to inventory
             local inventoryArgs = {
                 [1] = "AddPet",
                 [2] = petUUID,
@@ -119,9 +119,10 @@ if game.PlaceId == 126884695634066 then
             }
             game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(spawnArgs))
 
-            -- Debug output
+            -- FIXED Debug output (proper Vector3 to string conversion)
+            local posString = string.format("(%.1f, %.1f, %.1f)", spawnPos.Position.X, spawnPos.Position.Y, spawnPos.Position.Z)
             print(string.format("Spawned %s (Age: %d, Weight: %d) at %s", 
-                petName, age, weight, spawnPos.Position))
+                petName, age, weight, posString))
         end
     })
 end
