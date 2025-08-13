@@ -39,8 +39,8 @@ if game.PlaceId == 126884695634066 then
         }
     })
 
-    local PetTab = Window:CreateTab("Pets", nil) -- Title, Image
-    local PetSection = PetTab:CreateSection("Pets Spawner")
+    local PetTab = Window:CreateTab("Pets Spawner", nil) -- Title, Image
+    local PetSection = PetTab:CreateSection("Spawn selected pet")
 
     local Dropdown = PetTab:CreateDropdown({
         Name = "Select Pet",
@@ -86,6 +86,7 @@ if game.PlaceId == 126884695634066 then
 
             -- Step 1: Load pet assets
             game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
+            wait(1)
 
             -- Step 2: Generate random UUID for the pet
             local function randomUUID()
@@ -95,11 +96,11 @@ if game.PlaceId == 126884695634066 then
                     return string.format("%x", v)
                 end)
             end
-            local petUUID = "{" .. randomUUID() .. "}"
+            local petUUID = randomUUID() 
 
             -- Step 3: Equip the pet in front of the player
             local playerPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-            local spawnPos = playerPos * CFrame.new(3, 0, -3) -- offset from player
+            local spawnPos = playerPos * CFrame.new(0, 0, -5) -- offset from player
 
             game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer("EquipPet", petUUID, spawnPos)
 
