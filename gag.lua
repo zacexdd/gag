@@ -79,35 +79,68 @@ if game.PlaceId == 126884695634066 then
     local Button = PetTab:CreateButton({
         Name = "Spawn Pet",
         Callback = function()
+            local petName = Rayfield.Flags.Dropdown1.CurrentOption[1]
+            local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1
+            local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1
 
-            local petName = Rayfield.Flags.Dropdown1.CurrentOption[1] -- from dropdown
-            local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1 -- weight slider
-            local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1 -- age slider (if you use it later)
-
-            -- Step 1: Load pet assets
-            game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
-            wait(1)
-
-            -- Step 2: Generate random UUID for the pet
-            local function randomUUID()
+            -- 1. Generate valid UUID (with curly braces)
+            local function generateValidUUID()
                 local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
-                return string.gsub(template, "[xy]", function(c)
+                local uuid = string.gsub(template, "[xy]", function(c)
                     local v = (c == "x") and math.random(0, 0xf) or math.random(8, 0xb)
                     return string.format("%x", v)
                 end)
+                return "{" .. uuid .. "}"
             end
-            local petUUID = randomUUID() 
+            local petUUID = generateValidUUID()
 
-            -- Step 3: Equip the pet in front of the player
-            local playerPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-            local spawnPos = playerPos * CFrame.new(0, 0, -5) -- offset from player
+            -- 2. First load the pet assets
+            game:GetService("ReplicatedStorage").GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
+            wait(0.5) -- Important delay for assets to load
 
-            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer("EquipPet", petUUID, spawnPos)
+            -- 3. Add to inventory (CRUCIAL STEP)
+            local inventoryArgs = {
+                [1] = "AddPetToInventory", -- Might be "AddToInventory" or similar
+                [2] = petUUID,
+                [3] = {
+                    Name = petName,
+                    Weight = weight,
+                    Age = age,
+                    Equipped = false
+                }
+            }
+            game:GetService("ReplicatedStorage").GameEvents.InventoryService:FireServer(unpack(inventoryArgs))
+            wait(0.3)
 
-            -- Optional: You could store petUUID if you want to unequip later
-            print("Spawned pet:", petName, "UUID:", petUUID, "Weight:", weight, "Age:", age)
+            -- 4. Verify in inventory (optional debug)
+            print("Attempting to add pet to inventory:", petName, petUUID)
 
+            -- 5. Calculate spawn position
+            local player = game.Players.LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+            local spawnCFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+
+            -- 6. Equip the pet
+            local equipArgs = {
+                [1] = "EquipPet",
+                [2] = petUUID,
+                [3] = spawnCFrame
+            }
+            game:GetService("ReplicatedStorage").GameEvents.PetsService:FireServer(unpack(equipArgs))
+
+            -- Debug output
+            print(string.format("Spawned %s (UUID: %s) at %s", petName, petUUID, spawnCFrame.Position))
+
+            -- Visual marker
+            local marker = Instance.new("Part")
+            marker.Anchored = true
+            marker.Size = Vector3.new(1, 1, 1)
+            marker.Position = spawnCFrame.Position
+            marker.Color = Color3.fromRGB(0, 255, 0)
+            marker.Transparency = 0.7
+            marker.Parent = workspace
+            game:GetService("Debris"):AddItem(marker, 5)
         end
     })
-
 end
