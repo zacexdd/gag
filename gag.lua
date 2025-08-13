@@ -1,140 +1,90 @@
 if game.PlaceId == 126884695634066 then
+
     local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
     local Window = Rayfield:CreateWindow({
-        Name = "Pet and Seed Viewer",
-        Icon = 0,
+        Name = "Pet and seed spawner script",
+        Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
         LoadingTitle = "Zace hub",
         LoadingSubtitle = "by Zace",
-        Theme = "Default",
-        ToggleUIKeybind = "K",
+        ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
+        Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+        ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+        DisableRayfieldPrompts = false,
+        DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
 
         ConfigurationSaving = {
             Enabled = true,
+            FolderName = nil, -- Create a custom folder for your hub/game
             FileName = "Zace Hub"
         },
 
-        KeySystem = true,
+        Discord = {
+            Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+            Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+            RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+        },
+
+        KeySystem = true, -- Set this to true to use our key system
         KeySettings = {
             Title = "Zace hub key system",
-            Note = "Get the key from here : www.gamelnk.site",
-            FileName = "Zace Hub",
-            SaveKey = true,
-            GrabKeyFromSite = true,
-            Key = {"https://pastebin.com/raw/y6zvrV55"}
+            Subtitle = "Copy the link from below",
+            Note = "Get the key from here : www.gamelnk.site", -- Use this to tell the user how to get a key
+            FileName = "Zace Hub", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+            SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+            GrabKeyFromSite = true, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+            Key = {"https://pastebin.com/raw/y6zvrV55"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
         }
     })
 
-    -- Table to store fake pets
-    local PetInventory = {}
+    local PetTab = Window:CreateTab("Pets", nil) -- Title, Image
+    local PetSection = PetTab:CreateSection("pets spawner")
 
-    -- Create custom GUI for pets
-    local ScreenGui = Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
-    ScreenGui.Name = "PetInventoryGUI"
-
-    local InventoryFrame = Instance.new("Frame", ScreenGui)
-    InventoryFrame.Size = UDim2.new(0, 300, 0, 200)
-    InventoryFrame.Position = UDim2.new(1, -310, 0.5, -100)
-    InventoryFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    InventoryFrame.Visible = true
-
-    local UIList = Instance.new("UIListLayout", InventoryFrame)
-    UIList.Padding = UDim.new(0, 5)
-    UIList.FillDirection = Enum.FillDirection.Vertical
-
-    local MainTab = Window:CreateTab("Pets", nil)
-
-    local PetDropdown = MainTab:CreateDropdown({
+    local Dropdown = PetTab:CreateDropdown({
         Name = "Select Pet",
         Options = {
-            "Kitsune", "Raccoon", "Disco Bee", "T-Rex",
-            "Corrupted Kitsune", "Raiju", "Lobster Thermidor",
-            "French Fry Ferret", "Spinosaurus", "Dragonfly",
-            "Hotdog Daschund", "Butterfly", "Blood Hedgehog",
-            "Moon Cat", "Spaghetti Sloth", "Kappa"
+        "Red Fox",
+        "Raccon", 
+        "Drangonfly", 
+        "Disco Bee",
         },
-        CurrentOption = {"nil"},
+        CurrentOption = {"Red Fox"},
         MultipleOptions = false,
-        Flag = "PetChoice",
-        Callback = function() end,
+        Flag = "Dropdown1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+        Callback = function(Options)
+
+        end
     })
 
-    local WeightInput = MainTab:CreateInput({
+    local Input = PetTab:CreateInput({
         Name = "Weight",
         CurrentValue = "1",
         PlaceholderText = "1",
-        Flag = "PetWeight",
-        Callback = function() end,
+        RemoveTextAfterFocusLost = false,
+        Flag = "Input1",
+        Callback = function(Text)
+
+        end
     })
 
-    local AgeInput = MainTab:CreateInput({
+    local Input = PetTab:CreateInput({
         Name = "Age",
         CurrentValue = "1",
         PlaceholderText = "1",
-        Flag = "PetAge",
-        Callback = function() end,
-    })
+        RemoveTextAfterFocusLost = false,
+        Flag = "Input2",
+        Callback = function(Text)
 
-    MainTab:CreateButton({
-        Name = "Add to Inventory",
-        Callback = function()
-            local petName = Rayfield.Flags.PetChoice.CurrentOption[1]
-            local weight = Rayfield.Flags.PetWeight.CurrentValue
-            local age = Rayfield.Flags.PetAge.CurrentValue
-
-            -- Store pet data
-            table.insert(PetInventory, {
-                Name = petName,
-                Weight = weight,
-                Age = age
-            })
-
-            -- Create UI button in inventory
-            local PetButton = Instance.new("TextButton", InventoryFrame)
-            PetButton.Size = UDim2.new(1, 0, 0, 30)
-            PetButton.Text = petName .. " (W:" .. weight .. ", A:" .. age .. ")"
-            PetButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            PetButton.TextColor3 = Color3.new(1, 1, 1)
-
-            -- When clicked, show in ViewportFrame
-            PetButton.MouseButton1Click:Connect(function()
-                local ViewGui = Instance.new("ScreenGui", game.Players.LocalPlayer.PlayerGui)
-                local Viewport = Instance.new("ViewportFrame", ViewGui)
-                Viewport.Size = UDim2.new(0, 300, 0, 300)
-                Viewport.Position = UDim2.new(0.5, -150, 0.5, -150)
-                Viewport.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-
-                local cam = Instance.new("Camera")
-                Viewport.CurrentCamera = cam
-
-                -- Try to get pet model from ReplicatedStorage (client visual)
-                local rs = game:GetService("ReplicatedStorage")
-                local petModel = rs:FindFirstChild(petName)
-
-                if petModel and petModel:IsA("Model") then
-                    local clone = petModel:Clone()
-                    clone.Parent = Viewport
-
-                    -- Camera position
-                    local cframe, size = clone:GetBoundingBox()
-                    cam.CFrame = CFrame.new(cframe.Position + Vector3.new(0, size.Y, size.Z + 3), cframe.Position)
-                else
-                    local label = Instance.new("TextLabel", Viewport)
-                    label.Size = UDim2.new(1, 0, 1, 0)
-                    label.Text = "Pet model not found!"
-                    label.TextColor3 = Color3.new(1, 1, 1)
-                    label.BackgroundTransparency = 1
-                end
-
-                -- Click anywhere to close
-                ViewGui.ResetOnSpawn = false
-                ViewGui.DisplayOrder = 999
-                ViewGui.IgnoreGuiInset = true
-
-                ViewGui.MouseButton1Click:Connect(function()
-                    ViewGui:Destroy()
-                end)
-            end)
         end
     })
+
+    local Button = PetTab:CreateButton({
+        Name = "Spawn Pet",
+        Callback = function()
+           
+        end
+    })
+
 end
