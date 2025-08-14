@@ -2,6 +2,7 @@ if game.PlaceId ~= 126884695634066 then
     return warn("You must be in the correct game!")
 end
 
+-- Keep your Rayfield key system intact
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -28,7 +29,7 @@ local Window = Rayfield:CreateWindow({
     }
 })
 
--- Create Pets tab
+-- Pets Tab
 local PetTab = Window:CreateTab("Pets Spawner", nil)
 local PetSection = PetTab:CreateSection("Spawn selected pet")
 
@@ -42,7 +43,7 @@ local Dropdown = PetTab:CreateDropdown({
     Flag = "Dropdown1"
 })
 
--- Input for Weight
+-- Weight input
 local WeightInput = PetTab:CreateInput({
     Name = "Weight",
     CurrentValue = "1",
@@ -51,7 +52,7 @@ local WeightInput = PetTab:CreateInput({
     Flag = "Input1"
 })
 
--- Input for Age
+-- Age input
 local AgeInput = PetTab:CreateInput({
     Name = "Age",
     CurrentValue = "1",
@@ -68,7 +69,7 @@ local Button = PetTab:CreateButton({
         local weight = tonumber(Rayfield.Flags.Input1.CurrentValue) or 1
         local age = tonumber(Rayfield.Flags.Input2.CurrentValue) or 1
 
-        -- Generate unique UUID
+        -- Generate unique UUID for pet
         local function generateUUID()
             local template = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
             return "{"..string.gsub(template, "[xy]", function(c)
@@ -84,53 +85,25 @@ local Button = PetTab:CreateButton({
         local hrp = character:WaitForChild("HumanoidRootPart")
         local spawnCFrame = hrp.CFrame * CFrame.new(0,0,-5)
 
-        -- 1. Load pet assets
-        RepStorage.GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
-        wait(0.5)
+        -- Fire remote exactly like working scripts
+        pcall(function()
+            -- Load pet assets
+            RepStorage.GameEvents.ReplicationChannel:FireServer("PetAssets", petName)
+            wait(0.2)
 
-        -- 2. Add pet to inventory using PetService or fallback services
-        local addArgs = {
-            [1] = "AddPet",
-            [2] = petUUID,
-            [3] = {Name = petName, Weight = weight, Age = age, Rarity = "Common"}
-        }
+            -- Add pet instantly
+            RepStorage.GameEvents.PetService:FireServer("AddPet", petUUID, {
+                Name = petName,
+                Weight = weight,
+                Age = age,
+                Rarity = "Common"
+            })
+            wait(0.1)
 
-        local servicesToTry = {"PetsService", "PetService", "PlayerDataService", "DataService", "InventoryManager"}
-        local added = false
+            -- Equip pet visually
+            RepStorage.GameEvents.PetsService:FireServer("EquipPet", petUUID, spawnCFrame)
+        end)
 
-        for _, svcName in ipairs(servicesToTry) do
-            local svc = RepStorage.GameEvents:FindFirstChild(svcName)
-            if svc then
-                pcall(function()
-                    svc:FireServer(unpack(addArgs))
-                    added = true
-                    print("Tried adding via", svcName)
-                end)
-                wait(0.2)
-            end
-        end
-
-        -- 3. Hatch fake egg if inventory add fails
-        if not added then
-            local hatchArgs = {"HatchPet", petName, petUUID}
-            RepStorage.GameEvents.PetEggService:FireServer(unpack(hatchArgs))
-            wait(0.5)
-        end
-
-        -- 4. Equip the pet visually
-        local equipArgs = {"EquipPet", petUUID, spawnCFrame}
-        RepStorage.GameEvents.PetsService:FireServer(unpack(equipArgs))
-
-        -- Optional visual marker for debug
-        local marker = Instance.new("Part")
-        marker.Size = Vector3.new(1,1,1)
-        marker.Anchored = true
-        marker.Position = spawnCFrame.Position
-        marker.Color = Color3.fromRGB(0,255,0)
-        marker.Transparency = 0.7
-        marker.Parent = workspace
-        game:GetService("Debris"):AddItem(marker, 5)
-
-        print("Spawned", petName, "with UUID:", petUUID)
+        print("Spawned & equipped:", petName, "UUID:", petUUID)
     end
 })
